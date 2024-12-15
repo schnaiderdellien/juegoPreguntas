@@ -41,7 +41,7 @@ def cargar_categoria(categoria):
         return [], []
 
 # Cargar categorías disponibles
-categorias = ["Nivel1", "Nivel2", "Nivel3"]
+categorias = ["nivel1", "nivel2", "nivel3"]
 
 # Inicializar el juego
 inicializacion_juego()
