@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import random
-import os
+
 
 # Configuración de la página
 st.set_page_config(page_title="Juego de Preguntas", page_icon="🔥", layout="wide")
@@ -31,9 +31,8 @@ def inicializacion_juego():
 # Función para cargar preguntas y retos desde un archivo CSV
 def cargar_categoria(categoria):
     """Cargar las preguntas y retos de un archivo CSV según la categoría"""
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    carpeta_preguntas = os.path.join(BASE_DIR, "preguntas")  # Asegúrate de tener esta carpeta con los archivos CSV
-    archivo_csv = os.path.join(carpeta_preguntas, f"{categoria.lower()}.csv")
+    carpeta_preguntas = "preguntas"  # Asegúrate de tener esta carpeta con los archivos CSV
+    archivo_csv = f"{carpeta_preguntas}/{categoria.lower()}.csv"
     
     try:
         df = pd.read_csv(archivo_csv)
