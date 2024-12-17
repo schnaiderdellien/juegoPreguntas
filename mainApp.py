@@ -246,8 +246,8 @@ else:
         for jugador in st.session_state.jugadores:
             puntos = st.number_input(
                 f"{jugador}:",
-                min_value=0,
-                max_value=10,
+                min_value=-50,
+                max_value=50,
                 step=1,
                 value=st.session_state.puntuaciones[jugador],
                 key=f"puntos_{jugador}"
