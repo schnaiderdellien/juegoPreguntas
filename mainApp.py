@@ -1,5 +1,7 @@
 import streamlit as st
 import random
+import pandas as pd
+import altair as alt
 
 # Configuración de la página
 st.set_page_config(page_title="Juego de Preguntas", page_icon="📱", layout="wide")
@@ -141,14 +143,13 @@ RETOS = {
         "Escribe y recita un monólogo profundo sobre la vida."
     ]
 }
-
 # Inicialización del juego
 def inicializacion_juego():
     """Inicializar las variables de sesión"""
     if 'jugadores' not in st.session_state:
         st.session_state.jugadores = []
     if 'jugadores_actuales' not in st.session_state:
-        st.session_state.jugadores_actuales = 0  # Para el control de turnos
+        st.session_state.jugadores_actuales = 0
     if 'juego_activo' not in st.session_state:
         st.session_state.juego_activo = False
     if 'categoria' not in st.session_state:
@@ -159,27 +160,25 @@ def inicializacion_juego():
         st.session_state.pregunta_seleccionada = None
     if 'reto_seleccionado' not in st.session_state:
         st.session_state.reto_seleccionado = None
-    if 'ronda_iniciada' not in st.session_state:
-        st.session_state.ronda_iniciada = False  # Estado de la ronda actual
+    if 'puntuaciones' not in st.session_state:
+        st.session_state.puntuaciones = {}
+    if 'ocultar_mensaje' not in st.session_state:
+        st.session_state.ocultar_mensaje = False
 
 # Inicializar el juego
 inicializacion_juego()
 
-# Si el juego no está activo, mostrar la configuración de los jugadores
+# Configuración del juego inicial
 if not st.session_state.juego_activo:
-    # Título del juego
     st.markdown("<h1 style='text-align: center;'>Juego de Preguntas y Retos</h1>", unsafe_allow_html=True)
-    st.markdown("<h5 style='text-align: center;'>Bienvenido al juego creado por Schnaider</h5>", unsafe_allow_html=True)
 
-    # Configuración de los jugadores
     st.header("Configuración de los jugadores")
     col1, col2 = st.columns(2)
 
     with col1:
         numero_jugadores = st.number_input("¿Cuántos jugadores?", min_value=2, step=1, value=2)
-        categorias = list(PREGUNTAS.keys())
-        categoria = st.selectbox("Elige tu nivel:", categorias)
-        jugar = st.button("Iniciar Juego", use_container_width=True)
+        categoria = st.selectbox("Elige tu nivel:", list(PREGUNTAS.keys()))
+        jugar = st.button("Iniciar Juego")
 
     with col2:
         jugadores = []
@@ -188,69 +187,99 @@ if not st.session_state.juego_activo:
             if nombre_jugador:
                 jugadores.append(nombre_jugador)
 
-    # Verificar que todos los jugadores hayan sido ingresados
-    if len(jugadores) == numero_jugadores and categoria and jugar:
+    if len(jugadores) == numero_jugadores and jugar:
         st.session_state.jugadores = jugadores
         st.session_state.categoria = categoria
-        st.session_state.preguntas = PREGUNTAS[categoria.lower()]
-        st.session_state.retos = RETOS[categoria.lower()]
         st.session_state.juego_activo = True
-        st.session_state.jugador_actual = random.choice(st.session_state.jugadores)  # Elegir aleatoriamente un jugador inicial
-        st.session_state.pregunta_seleccionada = None
-        st.session_state.reto_seleccionado = None
-        st.session_state.ronda_iniciada = False
-        st.rerun()  # Recarga la página para mostrar la ronda de juego
+        st.session_state.jugador_actual = random.choice(jugadores)
+        st.session_state.puntuaciones = {jugador: 0 for jugador in jugadores}
+        st.rerun()
 
+# Ronda de Juego
 else:
-    # Cuando el juego esté activo, mostrar la "Ronda de Juego"
-    st.header("Ronda de Juego")
-
-    # Opción para cambiar de categoría en cualquier momento
-    nueva_categoria = st.selectbox("Selecciona una categoría:", list(PREGUNTAS.keys()), 
-                                   index=list(PREGUNTAS.keys()).index(st.session_state.categoria))
+    st.markdown("<h1 style='text-align: center;'>Ronda de Juego</h1>", unsafe_allow_html=True)
+    
+    # Selector de categoría en cualquier momento
+    nueva_categoria = st.selectbox(
+        "Selecciona una categoría:", list(PREGUNTAS.keys()), 
+        index=list(PREGUNTAS.keys()).index(st.session_state.categoria)
+    )
     if nueva_categoria != st.session_state.categoria:
         st.session_state.categoria = nueva_categoria
-        st.session_state.preguntas = PREGUNTAS[nueva_categoria.lower()]
-        st.session_state.retos = RETOS[nueva_categoria.lower()]
+        st.session_state.pregunta_seleccionada = None
+        st.session_state.reto_seleccionado = None
+        st.session_state.ocultar_mensaje = False
         st.success(f"Categoría cambiada a: {nueva_categoria}")
+        st.rerun()
 
     jugador_actual = st.session_state.jugador_actual
 
-    # Si la ronda no ha iniciado, elegir una pregunta o reto aleatoriamente
-    if not st.session_state.ronda_iniciada:
-        if random.choice([True, False]):  # True para pregunta, False para reto
-            if st.session_state.preguntas:
-                pregunta_seleccionada = random.choice(st.session_state.preguntas)
-                st.session_state.pregunta_seleccionada = pregunta_seleccionada
-                st.session_state.reto_seleccionado = None
-                st.write(f"**{jugador_actual}**, tu pregunta es: {pregunta_seleccionada}")
+    # Mostrar Pregunta/Reto si no está oculto
+    if not st.session_state.ocultar_mensaje:
+        if not st.session_state.pregunta_seleccionada and not st.session_state.reto_seleccionado:
+            if random.choice([True, False]):
+                st.session_state.pregunta_seleccionada = random.choice(PREGUNTAS[st.session_state.categoria])
             else:
-                st.write("¡No hay más preguntas disponibles!")
-        else:
-            if st.session_state.retos:
-                reto_seleccionado = random.choice(st.session_state.retos)
-                st.session_state.reto_seleccionado = reto_seleccionado
-                st.session_state.pregunta_seleccionada = None
-                otro_jugador = random.choice([j for j in st.session_state.jugadores if j != jugador_actual])
-                st.write(f"**{jugador_actual}**, tu reto es: {reto_seleccionado} (Interacción con **{otro_jugador}**)")
-            else:
-                st.write("¡No hay más retos disponibles!")
+                st.session_state.reto_seleccionado = random.choice(RETOS[st.session_state.categoria])
 
-    # Verificar si el jugador quiere continuar con la siguiente ronda
-    col1, col2 = st.columns([3, 1])
+        if st.session_state.pregunta_seleccionada:
+            st.markdown(f"<h2 style='text-align: center;'>{jugador_actual}, {st.session_state.pregunta_seleccionada}</h2>", unsafe_allow_html=True)
+        elif st.session_state.reto_seleccionado:
+            otro_jugador = random.choice([j for j in st.session_state.jugadores if j != jugador_actual])
+            st.markdown(f"<h2 style='text-align: center;'>{jugador_actual}, {st.session_state.reto_seleccionado} a {otro_jugador}</h2>", unsafe_allow_html=True)
+
+    # Botón para la siguiente ronda
+    if st.button("Siguiente ronda"):
+        st.session_state.jugadores_actuales = (st.session_state.jugadores_actuales + 1) % len(st.session_state.jugadores)
+        st.session_state.jugador_actual = st.session_state.jugadores[st.session_state.jugadores_actuales]
+        st.session_state.pregunta_seleccionada = None
+        st.session_state.reto_seleccionado = None
+        st.session_state.ocultar_mensaje = False
+        st.rerun()
+
+    # Mostrar puntuaciones actuales en dos columnas
+    st.header("Puntuaciones")
+    col1, col2 = st.columns(2)
 
     with col1:
-        if st.button("Siguiente ronda"):
-            st.session_state.jugadores_actuales = (st.session_state.jugadores_actuales + 1) % len(st.session_state.jugadores)
-            st.session_state.jugador_actual = st.session_state.jugadores[st.session_state.jugadores_actuales]
-            st.session_state.pregunta_seleccionada = None
-            st.session_state.reto_seleccionado = None
-            st.session_state.ronda_iniciada = False
-            st.rerun()
+        # Campos number_input para modificar puntos
+        for jugador in st.session_state.jugadores:
+            puntos = st.number_input(
+                f"{jugador}:",
+                min_value=0,
+                max_value=10,
+                step=1,
+                value=st.session_state.puntuaciones[jugador],
+                key=f"puntos_{jugador}"
+            )
+            if puntos != st.session_state.puntuaciones[jugador]:
+                st.session_state.puntuaciones[jugador] = puntos
+                st.session_state.ocultar_mensaje = True
+                st.rerun()
 
     with col2:
-        if st.button("Salir del Juego"):
-            st.session_state.juego_activo = False
-            st.session_state.jugadores = []
-            st.session_state.categoria = None
-            st.write("Gracias por jugar. ¡Hasta la próxima!")
+        # Gráfica de puntuaciones
+        if st.session_state.puntuaciones:
+            df_puntos = pd.DataFrame({
+                "Jugador": list(st.session_state.puntuaciones.keys()),
+                "Puntuación": list(st.session_state.puntuaciones.values())
+            })
+            
+            # Crear gráfico de barras con Altair
+            chart = alt.Chart(df_puntos).mark_bar().encode(
+                y=alt.X("Jugador:N", title="Jugador", sort=None),
+                x=alt.Y("Puntuación:Q", title="Puntuación"),
+                color=alt.Color("Jugador:N", legend=None)
+            ).properties(
+                width=300,
+                height=400
+            )
+            st.altair_chart(chart, use_container_width=True)
+
+    # Botón para salir del juego
+    if st.button("Salir del Juego"):
+        st.session_state.juego_activo = False
+        st.session_state.jugadores = []
+        st.session_state.categoria = None
+        st.session_state.puntuaciones = {}
+        st.write("Gracias por jugar. ¡Hasta la próxima!")
